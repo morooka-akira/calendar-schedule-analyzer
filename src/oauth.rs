@@ -174,13 +174,13 @@ pub async fn get_access_token() -> Result<Token> {
             let client = AuthClient::new(client_id, client_secret);
             let refresh_token_str = token.refresh_token.unwrap();
             let token_response = client.get_token_from_refresh(&refresh_token_str).await?;
-            let token = save_to_tmpfile(&token_response)?;
+            let token = save_to_tmpfile(&token_response, &refresh_token_str.clone())?;
             Ok(token)
         }
     } else {
         let client = AuthClient::new(client_id, client_secret);
         let token = client.get_access_token().await?;
-        let token = save_to_tmpfile(&token)?;
+        let token = save_to_tmpfile(&token, &token.refresh_token().unwrap().secret())?;
 
         Ok(token)
     }
@@ -188,13 +188,14 @@ pub async fn get_access_token() -> Result<Token> {
 
 fn save_to_tmpfile(
     token: &StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
+    refresh_token: &str,
 ) -> Result<Token> {
     let date_time: DateTime<Utc> = SystemTime::now().into();
     let temp_token = TempToken {
         access_token: token.access_token().secret().clone(),
         token_type: token.token_type().as_ref().to_string(),
         expires_in: token.expires_in().unwrap().as_secs(),
-        refresh_token: Some(token.refresh_token().unwrap().secret().to_string()),
+        refresh_token: Some(refresh_token.to_string()),
         scope: Some(
             token
                 .scopes()
